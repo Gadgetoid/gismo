@@ -1,0 +1,12 @@
+build/
+local/
+__pycache__/
+.DS_Store
+tests/host/test_core
+tests/host/map_tool
+tests/host/jpeg_tool
+tests/host/route_tool
+tests/host/grid_vectors.csv
+downloads/
+tests/host/zip_test.zip
+tests/host/zip_input.bin

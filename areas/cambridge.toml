@@ -1,0 +1,11 @@
+# GISmo area: map packs, walking routes and places for one area.
+# bbox is British National Grid metres: west, south, east, north.
+# osm is a Geofabrik extract path, used for footpaths, routes and places.
+
+name = "Cambridge"
+bbox = [543000, 256000, 547000, 260000]
+osm = "europe/united-kingdom/england/cambridgeshire"
+
+[[maps]]
+source = "os-local"
+paths = true

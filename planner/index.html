@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GISmo mission planner</title>
+<link rel="stylesheet" href="gismo.css">
+<style>
+fieldset {
+    margin: 0;
+    padding: 0;
+    border: none;
+    min-inline-size: 0;
+    display: grid;
+    gap: 0.6rem;
+
+    legend {
+        padding: 0;
+        margin-bottom: 0.4rem;
+        font-weight: 600;
+    }
+
+    label {
+        display: grid;
+        gap: 0.2rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+
+        input, select, textarea {
+            width: 100%;
+            padding: 0.35rem 0.5rem;
+            border: 1px solid var(--line);
+            border-radius: 0.35rem;
+            background: var(--paper);
+            color: var(--ink);
+            font-size: 0.95rem;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+    }
+}
+
+ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.4rem;
+
+    > li {
+        border: 1px solid var(--line);
+        border-radius: 0.5rem;
+
+        &[data-drop="before"] {
+            box-shadow: 0 -3px 0 var(--accent);
+        }
+
+        &[data-drop="after"] {
+            box-shadow: 0 3px 0 var(--accent);
+        }
+
+        &[aria-current="true"] {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+    }
+
+    details {
+        summary {
+            padding: 0.5rem 0.7rem;
+            cursor: grab;
+            font-weight: 600;
+
+            small {
+                font-weight: 400;
+                color: var(--muted);
+            }
+        }
+
+        > fieldset {
+            padding: 0 0.7rem 0.7rem;
+        }
+    }
+
+    li:not([data-task="choice"]) label[data-task="choice"],
+    li[data-task="via"] [data-hide="via"] {
+        display: none;
+    }
+
+    label:has(input[type="checkbox"]) {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        input {
+            width: auto;
+        }
+    }
+
+    fieldset fieldset {
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        justify-items: start;
+        column-gap: 0.8rem;
+
+        legend {
+            font-weight: 400;
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        img {
+            width: 8rem;
+            aspect-ratio: 4 / 3;
+            object-fit: cover;
+            border-radius: 0.3rem;
+            background: var(--line);
+
+            grid-row: span 2;
+
+            &:not([src]) {
+                display: none;
+            }
+        }
+
+        input, button {
+            grid-column: 2;
+        }
+    }
+
+    output {
+        font-size: 0.85rem;
+        color: var(--muted);
+    }
+
+    menu {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+
+        li:last-child {
+            margin-left: auto;
+
+            button {
+                color: var(--danger);
+            }
+        }
+    }
+}
+
+[aria-labelledby="places-heading"] {
+    input {
+        width: 100%;
+        padding: 0.35rem 0.5rem;
+        border: 1px solid var(--line);
+        border-radius: 0.35rem;
+        background: var(--paper);
+    }
+
+    ul {
+        margin: 0.5rem 0 0;
+        padding: 0;
+        list-style: none;
+        max-height: 14rem;
+        overflow: auto;
+
+        button {
+            width: 100%;
+            text-align: left;
+            border: none;
+            border-radius: 0.3rem;
+            padding: 0.25rem 0.4rem;
+            background: none;
+
+            &:hover {
+                background: var(--paper);
+            }
+
+            small {
+                color: var(--muted);
+            }
+        }
+    }
+}
+</style>
+<script src="gismo.js"></script>
+<script src="mapview.js"></script>
+<script src="planner.js" defer></script>
+</head>
+<body>
+<header>
+    <h1>GISmo <small>mission planner</small></h1>
+    <nav aria-label="Files">
+        <button type="button" data-action="open-card">Open card</button>
+        <label>Mission <select name="missions" disabled><option value="">No card open</option></select></label>
+        <label>Maps and places… <input type="file" name="maps" accept=".gmap,.groute,.json" multiple></label>
+        <label>Mission file… <input type="file" name="mission" accept=".txt"></label>
+        <button type="button" data-action="new-mission">New</button>
+        <button type="button" data-action="save-mission">Save</button>
+        <button type="button" data-action="export-mission">Export zip</button>
+        <button type="button" data-action="backup-card" disabled>Back up card</button>
+    </nav>
+</header>
+<main>
+    <figure>
+        <canvas aria-label="Map. Click to add a waypoint, drag to pan, scroll to zoom, drag a waypoint to move it."></canvas>
+        <figcaption>
+            <label>Map <select name="layer"></select></label>
+            <button type="button" data-action="zoom-in" aria-label="Zoom in">+</button>
+            <button type="button" data-action="zoom-out" aria-label="Zoom out">−</button>
+            <button type="button" data-action="fit">Fit</button>
+            <output name="cursor"></output>
+            <small></small>
+        </figcaption>
+    </figure>
+    <aside>
+        <form name="mission" autocomplete="off">
+            <fieldset>
+                <legend>Mission</legend>
+                <label>Title <input name="title" required></label>
+                <label>Intro <textarea name="intro" rows="2"></textarea></label>
+                <label>File name <input name="file" pattern="[a-z0-9\-]+" placeholder="bar-hill"></label>
+            </fieldset>
+            <section aria-labelledby="waypoints-heading">
+                <h2 id="waypoints-heading">Waypoints</h2>
+                <p>Click the map or a place below to add one, or click the line between two to insert one. Drag markers to move them, and drag names in this list to reorder.</p>
+                <ol></ol>
+            </section>
+        </form>
+        <section aria-labelledby="places-heading">
+            <h2 id="places-heading">Places</h2>
+            <input type="search" name="places" placeholder="Search places on the map" aria-label="Search places">
+            <ul></ul>
+        </section>
+        <ul role="status" aria-live="polite"></ul>
+        <details>
+            <summary>Mission file</summary>
+            <pre><output name="preview"></output></pre>
+        </details>
+    </aside>
+</main>
+<template>
+    <li>
+        <details open>
+            <summary></summary>
+            <fieldset>
+                <label>Name <input name="name" placeholder="Optional for a route point"></label>
+                <label>Task
+                    <select name="task">
+                        <option value="visit">Visit</option>
+                        <option value="photo">Take a photo</option>
+                        <option value="choice">Multiple choice question</option>
+                        <option value="count">Count something</option>
+                        <option value="via">Go here (route point)</option>
+                    </select>
+                </label>
+                <label>Arrival radius (metres) <input name="radius" type="number" min="5" max="500" step="5"></label>
+                <label><input type="checkbox" name="route"> Show the walking route to here</label>
+                <label data-hide="via">Clue <textarea name="clue" rows="2" placeholder="Shown on the way there"></textarea></label>
+                <label data-hide="via">Prompt <textarea name="prompt" rows="2" placeholder="Shown on arrival"></textarea></label>
+                <label data-task="choice">Choices <textarea name="choices" rows="3" placeholder="One per line"></textarea></label>
+                <label data-task="choice">Right answer <select name="answer"></select></label>
+                <fieldset data-hide="via">
+                    <legend>Photo hint</legend>
+                    <img alt="">
+                    <input type="file" name="photo" accept="image/*" aria-label="Choose a photo hint">
+                    <button type="button" data-action="remove-photo">Remove</button>
+                </fieldset>
+                <output name="where"></output>
+                <menu>
+                    <li><button type="button" data-action="up">Up</button></li>
+                    <li><button type="button" data-action="down">Down</button></li>
+                    <li><button type="button" data-action="show">Show on map</button></li>
+                    <li><button type="button" data-action="delete">Delete</button></li>
+                </menu>
+            </fieldset>
+        </details>
+    </li>
+</template>
+<dialog>
+    <form method="dialog">
+        <p></p>
+        <button>OK</button>
+    </form>
+</dialog>
+</body>
+</html>

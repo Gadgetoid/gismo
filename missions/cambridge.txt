@@ -1,0 +1,42 @@
+# GISmo mission. Lines starting with # are comments.
+# Each [section] is a waypoint, visited in order. location is latitude, longitude (WGS84).
+# task is visit, photo, choice (pick from choices, answer is the right one) or count (enter a number).
+# radius is how close, in metres, counts as arriving (default 25).
+
+title = Cambridge Explorer
+intro = A walk through the middle of Cambridge. Follow the arrow, and when you arrive, do the task!
+
+[Round Church]
+location = 52.208475, 0.118984
+task = photo
+clue = Start at a church that isn't the usual shape.
+prompt = Take a photo of the Round Church. It's nearly 900 years old!
+
+[King's College Chapel]
+location = 52.204783, 0.116542
+radius = 40
+task = visit
+clue = Head south down Trinity Street and King's Parade to the biggest chapel in town.
+prompt = You found King's College Chapel. Listen out for the choir!
+
+[Corpus Clock]
+location = 52.203759, 0.117688
+task = choice
+clue = Keep going south. Look for a gold clock on the corner of a building.
+prompt = What creature sits on top of the clock?
+choices = Grasshopper | Dragon | Owl | Cat
+answer = Grasshopper
+
+[Fitzwilliam Museum]
+location = 52.199854, 0.119774
+radius = 30
+task = count
+clue = Follow Trumpington Street to a museum with huge columns.
+prompt = How many stone lions can you count by the front steps?
+
+[Reality Checkpoint]
+location = 52.202195, 0.128203
+radius = 20
+task = photo
+clue = Last one! Cross over to Parker's Piece and find the lamp post in the middle.
+prompt = Take a photo of Reality Checkpoint. Well done, explorer!

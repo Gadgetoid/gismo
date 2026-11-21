@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GISmo outing viewer</title>
+<link rel="stylesheet" href="gismo.css">
+<style>
+aside {
+    dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.25rem 1rem;
+        margin: 0 0 0.5rem;
+
+        dt {
+            color: var(--muted);
+        }
+
+        dd {
+            margin: 0;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+    }
+
+    ol {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 0.35rem;
+
+        button {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 3.2rem 1fr auto;
+            align-items: center;
+            gap: 0.6rem;
+            text-align: left;
+
+            time {
+                color: var(--muted);
+                font-variant-numeric: tabular-nums;
+            }
+
+            small {
+                display: block;
+                color: var(--muted);
+            }
+
+            img {
+                width: 4.5rem;
+                aspect-ratio: 4 / 3;
+                object-fit: cover;
+                border-radius: 0.3rem;
+            }
+        }
+
+        li[aria-current="true"] button {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+    }
+}
+
+figure figcaption label:has(input[type="checkbox"]) {
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.3rem;
+    background: color-mix(in srgb, var(--panel) 85%, transparent);
+}
+
+dialog {
+    max-width: min(46rem, 95vw);
+
+    figure {
+        margin: 0 0 0.8rem;
+        background: none;
+
+        img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 0.4rem;
+            image-rendering: pixelated;
+
+            &:not([src]) {
+                display: none;
+            }
+        }
+
+        figcaption {
+            position: static;
+            display: block;
+            margin-top: 0.6rem;
+            pointer-events: auto;
+        }
+    }
+}
+</style>
+<script src="gismo.js"></script>
+<script src="mapview.js"></script>
+<script src="viewer.js" defer></script>
+</head>
+<body>
+<header>
+    <h1>GISmo <small>outing viewer</small></h1>
+    <nav aria-label="Files">
+        <label>Outing zip or files… <input type="file" name="outing" accept=".zip,.gpx,.csv,.jpg,.jpeg,.txt" multiple></label>
+        <button type="button" data-action="open-folder">Open session folder</button>
+        <label>Maps… <input type="file" name="maps" accept=".gmap" multiple></label>
+    </nav>
+</header>
+<main>
+    <figure>
+        <canvas aria-label="Map of the outing. Drag to pan, scroll to zoom, click a photo to see it."></canvas>
+        <figcaption>
+            <label>Map <select name="layer"></select></label>
+            <button type="button" data-action="zoom-in" aria-label="Zoom in">+</button>
+            <button type="button" data-action="zoom-out" aria-label="Zoom out">-</button>
+            <button type="button" data-action="fit">Fit</button>
+            <label><input type="checkbox" name="online" checked> Show OpenStreetMap where there's no GISmo map</label>
+            <output name="cursor"></output>
+            <small></small>
+        </figcaption>
+    </figure>
+    <aside>
+        <h2>No outing open</h2>
+        <p>Open an outing .zip from the card's Outings folder, or the files from a mission's folder in Sessions: its tracks, events.csv and photos.</p>
+        <dl></dl>
+        <section aria-labelledby="timeline-heading">
+            <h2 id="timeline-heading">What happened</h2>
+            <ol></ol>
+        </section>
+        <ul role="status" aria-live="polite"></ul>
+        <details>
+            <summary>summary.txt</summary>
+            <pre><output name="summary"></output></pre>
+        </details>
+    </aside>
+</main>
+<dialog>
+    <form method="dialog">
+        <figure>
+            <img alt="">
+            <figcaption></figcaption>
+        </figure>
+        <button>Close</button>
+    </form>
+</dialog>
+</body>
+</html>
