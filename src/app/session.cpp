@@ -11,7 +11,7 @@
 namespace gismo {
 
 void sessions_folder(wchar_t *folder) {
-    exe_folder(folder);
+    data_root(folder);
     lstrcatW(folder, L"\\Sessions");
 }
 

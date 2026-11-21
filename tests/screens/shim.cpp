@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include <algorithm>
 #include <map>
 #include <set>
 #include <string>
@@ -56,11 +57,12 @@ std::set<FILE *> open_files;
 font_face &face(bool bold) {
     font_face &chosen = faces[bold ? 1 : 0];
     if (!chosen.loaded) {
+        const char *chosen_path = getenv(bold ? "GISMO_BOLD_FONT" : "GISMO_FONT");
         const char *folder = getenv("GISMO_FONTS");
-        std::string path = std::string(folder ? folder : "/System/Library/Fonts/Supplemental") + (bold ? "/Tahoma Bold.ttf" : "/Tahoma.ttf");
+        std::string path = chosen_path ? chosen_path : std::string(folder ? folder : "/System/Library/Fonts/Supplemental") + (bold ? "/Tahoma Bold.ttf" : "/Tahoma.ttf");
         FILE *file = fopen(path.c_str(), "rb");
         if (file == nullptr) {
-            fprintf(stderr, "screens: can't open %s (set GISMO_FONTS)\n", path.c_str());
+            fprintf(stderr, "screens: can't open %s (set GISMO_FONTS, or GISMO_FONT and GISMO_BOLD_FONT)\n", path.c_str());
             exit(1);
         }
         fseek(file, 0, SEEK_END);

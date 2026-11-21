@@ -27,6 +27,16 @@ bool folder_exists(const wchar_t *path) {
     return attributes != 0xFFFFFFFF && (attributes & FILE_ATTRIBUTE_DIRECTORY);
 }
 
+void data_root(wchar_t *folder) {
+    find_data_folder(L"Maps", folder);
+    wchar_t *slash = wcsrchr(folder, L'\\');
+    if (folder_exists(folder) && slash) {
+        *slash = 0;
+    } else {
+        exe_folder(folder);
+    }
+}
+
 void find_data_folder(const wchar_t *name, wchar_t *folder) {
     wchar_t base[MAX_PATH];
     exe_folder(base);

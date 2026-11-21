@@ -511,3 +511,13 @@ document.querySelector("figcaption").addEventListener("click", event => {
         fitOuting();
     }
 });
+
+gismo.fetchDefaultMaps(name => name.endsWith(".gmap")).then(async files => {
+    for (const file of files) {
+        mapView.addPack(await gismo.MapPack.open(file));
+    }
+    updateLayers();
+    if (files.length && !state.title) {
+        mapView.fit(mapView.mapBounds());
+    }
+});

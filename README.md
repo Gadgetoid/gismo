@@ -19,6 +19,23 @@ tests               host and planner tests
 
 A new device needs a `src/devices/<name>` with a `device_profile` and a `camera` implementation, built with `-DGISMO_DEVICE=<name>`.
 
+## Installing
+
+Each release has:
+
+- `GISmo-<version>-junosb.cab`: copy to the Juno and tap it to install GISmo to `\Program Files\GISmo`, with a Start menu shortcut. `-setup.exe` does the same without wceload; `-junosb.zip` has the same files.
+- `GISmo-<version>-card.zip`: copy its `GISmo` folder to the storage card. It has the example Cambridge map and mission, the camera filters, and the planner and viewer. GISmo finds `\<card>\GISmo\Maps`, `Missions` and `Filters` wherever it's installed, and keeps `Sessions` and `Outings` beside them. The card folder can also hold `GISmo.exe` itself and be run from there.
+- `GISmo-<version>-planner.zip`: the planner and viewer to open from a PC. They're also on GitHub Pages, where they open with the example map.
+
+## Continuous integration
+
+`.github/workflows/build.yml` runs on every push and pull request:
+
+- `test`: host, planner and browser tests, and the screenshots (with DejaVu Sans standing in for Tahoma), uploaded as an artifact.
+- `device`: builds GISmo with the latest grimace release and llvm-builds release (or a tag or branch given when run by hand), checks its imports, packages it, and uploads the CAB, installer, zip, card zip and planner zip.
+- `pages`: on `main`, publishes the planner and viewer, with the example map, to GitHub Pages.
+- `release`: on a `v*` tag, publishes those files as a GitHub release.
+
 ## Building
 
 Needs [grimace](https://github.com/grimace-sdk/grimace) (set `GRIMACE=`, default `../../grimace`).
@@ -26,7 +43,9 @@ Needs [grimace](https://github.com/grimace-sdk/grimace) (set `GRIMACE=`, default
 ```
 make            build/junosb/GISmo.exe
 make maps       build every local/areas/*.toml into build/maps/<area>/ (AREAS= to choose)
-make card       build/card/GISmo: exe, maps (maps/ and build/maps/), missions (missions/ and local/missions/)
+make card       build/card/GISmo: exe, maps (maps/ and build/maps/), missions (missions/ and local/missions/); DIAGNOSTICS=no leaves out KeyTest and CamTest
+make packages   build/junosb/packages: the CAB, self-installer and zip (grimace_package)
+make site       build/site: the planner and viewer with the example maps, as published to GitHub Pages
 make test       host and planner tests, against the example maps in maps/
 make example-maps  rebuild maps/ from areas/cambridge.toml
 make screens    screenshots of every screen without a device: build/screens/*.png and contact-sheet.png

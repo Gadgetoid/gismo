@@ -54,3 +54,8 @@ target_link_libraries(KeyTest PRIVATE grimace::aygshell)
 
 grimace_add_executable(CamTest src/diagnostics/camtest.cpp ICON assets/gismo.ico)
 target_link_libraries(CamTest PRIVATE gismo_platform grimace::aygshell)
+
+grimace_package("GISmo" PROVIDER "Phil Howard"
+    TARGETS GISmo
+    FILES LICENSE THIRD-PARTY.md
+    SHORTCUTS GISmo "GISmo")

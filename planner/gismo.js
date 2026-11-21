@@ -852,7 +852,31 @@ const gismo = (() => {
         return {metres, seconds: first === null ? 0 : (last - first) / 1000, start: first, end: last};
     }
 
-    return {wgs84ToGrid, gridToWgs84, gridReference, parseMission, writeMission, missionProblems, MapPack, RouteGraph, bmp565, slug, tasks, tileSize, zip, unzip, exifPosition, parseGpx, parseCsv, trackStats};
+    async function fetchDefaultMaps(accept) {
+        if (typeof location === "undefined" || !location.protocol.startsWith("http")) {
+            return [];
+        }
+        let names;
+        try {
+            const response = await fetch("maps/index.json");
+            if (!response.ok) {
+                return [];
+            }
+            names = (await response.json()).filter(accept);
+        } catch {
+            return [];
+        }
+        const files = [];
+        for (const name of names) {
+            const response = await fetch(`maps/${encodeURIComponent(name)}`);
+            if (response.ok) {
+                files.push(new File([await response.blob()], name));
+            }
+        }
+        return files;
+    }
+
+    return {wgs84ToGrid, gridToWgs84, gridReference, parseMission, writeMission, missionProblems, MapPack, RouteGraph, bmp565, slug, tasks, tileSize, zip, unzip, exifPosition, parseGpx, parseCsv, trackStats, fetchDefaultMaps};
 })();
 
 if (typeof module !== "undefined") {

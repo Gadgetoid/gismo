@@ -351,6 +351,7 @@ void exe_folder(wchar_t *folder);
 void utf8_to_wide(const char *text, wchar_t *output, int output_size);
 bool folder_exists(const wchar_t *path);
 void find_data_folder(const wchar_t *name, wchar_t *folder);
+void data_root(wchar_t *folder);
 int read_file(const wchar_t *path, char *buffer, int size);
 void load_settings();
 bool write_whole_file(const wchar_t *path, const void *data, DWORD length);

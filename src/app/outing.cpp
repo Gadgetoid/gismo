@@ -182,7 +182,7 @@ bool save_outing() {
     }
     close_run();
     wchar_t folder[MAX_PATH];
-    exe_folder(folder);
+    data_root(folder);
     lstrcatW(folder, L"\\Outings");
     CreateDirectoryW(folder, nullptr);
     const wchar_t *stem = app.mission.mission_index >= 0 ? app.mission.missions[app.mission.mission_index].stem : L"free-roam";

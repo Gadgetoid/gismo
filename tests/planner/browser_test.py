@@ -290,6 +290,25 @@ def test_online_zoom(browser, base, errors):
         page.close()
 
 
+def test_site(browser, base, errors):
+    if not (ROOT / "build/site/maps/index.json").exists():
+        check("the Pages site is built (make site)", False)
+        return
+    page = browser.new_page(viewport={"width": 1280, "height": 800})
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    route_online(page)
+    page.goto(f"{base}/build/site/index.html")
+    page.wait_for_timeout(1500)
+    check("on Pages the planner opens with the default map, routes and places", page.evaluate("mapView.details.length === 1 && state.routes.length === 1 && state.places.length > 100"))
+    page.goto(f"{base}/build/site/viewer.html")
+    page.wait_for_timeout(1000)
+    check("on Pages the viewer opens with the default map", page.evaluate("mapView.details.length === 1"))
+    page.goto(f"{base}/planner/index.html")
+    page.wait_for_timeout(500)
+    check("from the repository folder the planner starts without maps", page.evaluate("!mapView.hasMaps()"))
+    page.close()
+
+
 def main():
     server = serve()
     base = f"http://127.0.0.1:{server.server_address[1]}"
@@ -304,6 +323,7 @@ def main():
         check("the planner doesn't fetch OpenStreetMap tiles", not online_requests, f"{len(online_requests)} requests")
         test_viewer(browser, base, errors)
         test_online_zoom(browser, base, errors)
+        test_site(browser, base, errors)
         browser.close()
     server.shutdown()
     check("no page errors", not errors, "; ".join(errors))

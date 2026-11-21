@@ -1,0 +1,177 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      grimace:
+        description: grimace tag or branch to build with (blank for the latest release)
+        default: ""
+      llvm:
+        description: llvm-builds release to build with (blank for the latest)
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - name: Install fonts and Chromium for the screenshots and browser tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-dejavu-core
+          uv run --quiet --with playwright playwright install --with-deps chromium
+
+      - name: Host and planner tests
+        run: make test
+
+      - name: Planner and viewer browser tests
+        env:
+          PLAYWRIGHT_CHANNEL: ""
+        run: make browser-test
+
+      - name: Screenshots
+        env:
+          GISMO_FONT: /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+          GISMO_BOLD_FONT: /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
+        run: make screens
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: screenshots
+          path: build/screens/*.png
+
+  device:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Choose the grimace and LLVM versions
+        id: versions
+        run: |
+          grimace="${{ inputs.grimace }}"
+          llvm="${{ inputs.llvm }}"
+          [ -n "$grimace" ] || grimace=$(gh api repos/grimace-sdk/grimace/releases/latest --jq .tag_name)
+          [ -n "$llvm" ] || llvm=$(gh api repos/grimace-sdk/llvm-builds/releases/latest --jq .tag_name)
+          version=$(git describe --tags --always)
+          echo "grimace=$grimace" >> "$GITHUB_OUTPUT"
+          echo "llvm=$llvm" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Building GISmo $version with grimace $grimace and llvm-builds $llvm" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/checkout@v7
+        with:
+          repository: grimace-sdk/grimace
+          ref: ${{ steps.versions.outputs.grimace }}
+          path: grimace
+
+      - name: Download the Windows CE LLVM
+        run: |
+          name=llvm-${{ steps.versions.outputs.llvm }}-linux-x86_64
+          url=https://github.com/grimace-sdk/llvm-builds/releases/download/${{ steps.versions.outputs.llvm }}
+          curl -fsSLO "$url/$name.tar.xz"
+          curl -fsSLO "$url/$name.tar.xz.sha256"
+          shasum -a 256 -c "$name.tar.xz.sha256"
+          tar xf "$name.tar.xz" -C "$RUNNER_TEMP"
+          echo "GRIMACE_ARM_LLVM=$RUNNER_TEMP/$name" >> "$GITHUB_ENV"
+
+      - uses: astral-sh/setup-uv@v10
+
+      - name: Build GISmo, check its imports and package it, with no warnings
+        run: |
+          make all packages GRIMACE=grimace 2>&1 | tee build.log
+          ! grep -i "warning:" build.log
+
+      - name: Assemble the card folder and the planner site
+        run: |
+          make card site GRIMACE=grimace DIAGNOSTICS=no
+
+      - name: Gather the release files
+        run: |
+          version=${{ steps.versions.outputs.version }}
+          mkdir dist
+          for file in build/junosb/packages/GISmo-*; do
+            case "$file" in
+              *-setup.exe) cp "$file" "dist/GISmo-$version-junosb-setup.exe" ;;
+              *.cab) cp "$file" "dist/GISmo-$version-junosb.cab" ;;
+              *.zip) cp "$file" "dist/GISmo-$version-junosb.zip" ;;
+            esac
+          done
+          (cd build/card && zip -qr "../../dist/GISmo-$version-card.zip" GISmo)
+          (cd build/site && zip -qr "../../dist/GISmo-$version-planner.zip" .)
+          {
+            echo "GISmo $version"
+            echo "grimace ${{ steps.versions.outputs.grimace }}, llvm-builds ${{ steps.versions.outputs.llvm }}"
+          } > dist/BUILD.txt
+          ls -l dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: gismo-${{ steps.versions.outputs.version }}
+          path: dist/*
+
+  pages:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the planner site
+        run: make site
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: build/site
+
+      - id: deployment
+        uses: actions/deploy-pages@v5
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, device]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: gismo-*
+          path: dist
+          merge-multiple: true
+
+      - name: Publish the release
+        run: |
+          {
+            echo "Install on the Juno SB with the .cab (or the -setup.exe), then copy the GISmo folder from the -card.zip to the storage card. The planner and viewer are in the card's Planner folder, in -planner.zip, and on GitHub Pages."
+            echo
+            echo "Built with $(sed -n 2p dist/BUILD.txt)."
+          } > notes.md
+          gh release create "${{ github.ref_name }}" dist/GISmo-* --repo "${{ github.repository }}" --title "GISmo ${{ github.ref_name }}" --notes-file notes.md

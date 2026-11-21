@@ -1026,3 +1026,15 @@ document.addEventListener("keydown", event => {
         select(-1);
     }
 });
+
+gismo.fetchDefaultMaps(name => /\.(gmap|groute|json)$/.test(name)).then(async files => {
+    if (!files.length || mapView.hasMaps()) {
+        return;
+    }
+    for (const file of files) {
+        await loadMapFile(file.name, file);
+    }
+    updateLayers();
+    fitView();
+    renderPlaces();
+});
