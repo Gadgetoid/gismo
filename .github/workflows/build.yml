@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.4.0
 
       - uses: actions/setup-node@v7
         with:
@@ -92,7 +92,7 @@ jobs:
           tar xf "$name.tar.xz" -C "$RUNNER_TEMP"
           echo "GRIMACE_ARM_LLVM=$RUNNER_TEMP/$name" >> "$GITHUB_ENV"
 
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.4.0
 
       - name: Build GISmo, check its imports and package it, with no warnings
         run: |
