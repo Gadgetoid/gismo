@@ -44,5 +44,6 @@ int main(int count, char **arguments) {
     fwrite(output, 1, length, file);
     fclose(file);
     printf("%d bytes in %.2f ms\n", length, milliseconds);
+    free(pixels);
     return 0;
 }
