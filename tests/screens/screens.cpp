@@ -52,6 +52,8 @@ using namespace gismo;
 namespace {
 
 bool camera_running;
+bool camera_starts = true;
+bool camera_has_frames = true;
 int scene_number;
 std::string output_folder;
 std::string card;
@@ -252,7 +254,8 @@ void prepare_card(const std::string &repository) {
         "[]\nlocation = 52.200400, 0.127900\ntask = via\n\n"
         "[Fenner's]\nlocation = 52.199400, 0.129700\ntask = choice\nprompt = What sport is played here?\nchoices = Cricket | Golf | Rugby\nanswer = Cricket\n\n"
         "[Long question]\nlocation = 52.199000, 0.130500\ntask = choice\nprompt = Look at the old sign by the gate. Which of these words can you spot on it, reading from the top all the way down?\nchoices = Cricket | Ground | Pavilion | Members | Gate | Club\nanswer = Ground\n\n"
-        "[Long count]\nlocation = 52.198800, 0.131000\ntask = count\nprompt = Stand by the scoreboard and count every window you can see on the pavilion, upstairs and downstairs, including the little round ones.\n");
+        "[Long count]\nlocation = 52.198800, 0.131000\ntask = count\nprompt = Stand by the scoreboard and count every window you can see on the pavilion, upstairs and downstairs, including the little round ones.\n\n"
+        "[Long photo]\nlocation = 52.198600, 0.131500\ntask = photo\nprompt = Find the oldest-looking tree at the edge of the field, stand back far enough to fit all of it in, and take a photo from the side where the sun shines.\n");
 }
 
 }
@@ -268,8 +271,8 @@ camera::~camera() {
 }
 
 bool camera::start(HWND, UINT) {
-    camera_running = true;
-    return true;
+    camera_running = camera_starts;
+    return camera_starts;
 }
 
 void camera::stop() {
@@ -281,6 +284,9 @@ bool camera::running() const {
 }
 
 bool camera::copy_frame(uint16_t *target) {
+    if (!camera_has_frames) {
+        return false;
+    }
     paint_scene(target, scene_number);
     return true;
 }
@@ -346,6 +352,14 @@ int main(int argc, char **argv) {
     open_task(0);
     save_frame("task-photo");
 
+    camera_has_frames = false;
+    open_camera(0);
+    save_frame("camera-starting");
+    camera_has_frames = true;
+    camera_starts = false;
+    open_camera(0);
+    save_frame("camera-failed");
+    camera_starts = true;
     open_camera(0);
     select_filter(3);
     scene_number = 1;
@@ -401,6 +415,10 @@ int main(int argc, char **argv) {
         scene_number = photo + 2;
         set_time(10, 20 + photo, photo * 7);
         take_photo();
+        if (photo == 0) {
+            shim_set_tick(GetTickCount() + 5000);
+            save_frame("camera-saved");
+        }
         close_camera(screen::map);
     }
     show_page(screen::photos);
@@ -464,6 +482,15 @@ int main(int argc, char **argv) {
     open_task(5);
     app.mission.count_value = 12;
     save_frame("task-long-count");
+
+    open_task(6);
+    open_camera(6);
+    scene_number = 9;
+    shim_set_tick(GetTickCount() + 5000);
+    RECT prompt = camera_prompt_rect();
+    RECT wheel = filter_wheel_rect();
+    expect(prompt.bottom <= wheel.top && wheel.bottom <= camera_height - 22, "a long photo prompt sits above the filter list");
+    save_frame("camera-long-prompt");
 
     return failures ? 1 : 0;
 }

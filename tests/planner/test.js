@@ -97,6 +97,23 @@ async function main() {
         }
     });
 
+    check("problems flag text the Juno would cut short", () => {
+        const stop = name => ({name, latitude: 52, longitude: 0, radius: 25, task: "visit", route: false, clue: "", prompt: "", choices: [], answer: "", photo: ""});
+        const mission = {title: "T", intro: "", waypoints: [stop("Gate")]};
+        assert.deepStrictEqual(gismo.missionProblems(mission), []);
+        mission.waypoints[0].prompt = "x".repeat(159);
+        assert.deepStrictEqual(gismo.missionProblems(mission), []);
+        mission.waypoints[0].prompt = "x".repeat(158) + "\u00e9";
+        assert.ok(gismo.missionProblems(mission).some(problem => /prompt is too long.*Cut about 1 letters/.test(problem)));
+        mission.waypoints[0].prompt = "";
+        Object.assign(mission.waypoints[0], {task: "choice", choices: ["a", "b", "c", "d", "e", "f", "g"], answer: "a"});
+        assert.ok(gismo.missionProblems(mission).some(problem => problem.includes("at most 6 choices")));
+        mission.waypoints[0].choices = ["a", "y".repeat(40)];
+        assert.ok(gismo.missionProblems(mission).some(problem => problem.includes("choice") && problem.includes("too long")));
+        mission.waypoints = Array.from({length: 33}, (_, index) => stop(`Stop ${index + 1}`));
+        assert.ok(gismo.missionProblems(mission).some(problem => problem.includes("at most 32 waypoints")));
+    });
+
     check("problems flag unsaveable missions", () => {
         const mission = {title: "T", intro: "", waypoints: [{name: "", latitude: 52, longitude: 0, radius: 25, task: "choice", clue: "", prompt: "", choices: ["a"], answer: "", photo: ""}]};
         const problems = gismo.missionProblems(mission);

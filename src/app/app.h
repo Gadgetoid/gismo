@@ -287,6 +287,7 @@ struct camera_state {
     int filter_index;
     DWORD flash_tick;
     int camera_task;
+    bool start_failed;
     wchar_t camera_note[96];
     int photos_taken;
 };
@@ -487,6 +488,8 @@ RECT shutter_rect();
 const wchar_t *filter_name();
 void apply_filter(const uint16_t *source, uint16_t *target, int target_stride);
 const wchar_t *filter_name_at(int index);
+const char *camera_prompt();
+RECT camera_prompt_rect();
 RECT filter_wheel_rect();
 void draw_filter_wheel();
 void draw_camera_screen();

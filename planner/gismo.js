@@ -249,11 +249,25 @@ const gismo = (() => {
         return mission;
     }
 
+    const deviceLimits = {title: 63, intro: 255, name: 47, clue: 255, prompt: 159, photo: 63, choice: 39, waypoints: 32, choices: 6};
+
+    function tooLong(problems, label, what, text, limit) {
+        const bytes = new TextEncoder().encode(text).length;
+        if (bytes > limit) {
+            problems.push(`${label}: the ${what} is too long for the Juno. Cut about ${bytes - limit} letters.`);
+        }
+    }
+
     function missionProblems(mission) {
         const problems = [];
         if (!mission.waypoints.length) {
             problems.push("Add at least one waypoint.");
         }
+        if (mission.waypoints.length > deviceLimits.waypoints) {
+            problems.push(`The Juno takes at most ${deviceLimits.waypoints} waypoints; this mission has ${mission.waypoints.length}.`);
+        }
+        tooLong(problems, "Mission", "title", mission.title, deviceLimits.title);
+        tooLong(problems, "Mission", "intro", mission.intro, deviceLimits.intro);
         mission.waypoints.forEach((waypoint, index) => {
             const label = waypoint.name || `Waypoint ${index + 1}`;
             if (!waypoint.name.trim() && waypoint.task !== "via") {
@@ -262,6 +276,10 @@ const gismo = (() => {
             if (/[\[\]]/.test(waypoint.name)) {
                 problems.push(`${label}: names can't contain [ or ].`);
             }
+            tooLong(problems, label, "name", waypoint.name, deviceLimits.name);
+            tooLong(problems, label, "clue", waypoint.clue, deviceLimits.clue);
+            tooLong(problems, label, "prompt", waypoint.prompt, deviceLimits.prompt);
+            tooLong(problems, label, "photo hint's file name", waypoint.photo, deviceLimits.photo);
             if (waypoint.task === "choice") {
                 if (waypoint.choices.length < 2) {
                     problems.push(`${label}: a choice task needs at least two choices.`);
@@ -269,6 +287,10 @@ const gismo = (() => {
                 if (waypoint.choices.some(choice => choice.includes("|"))) {
                     problems.push(`${label}: choices can't contain |.`);
                 }
+                if (waypoint.choices.length > deviceLimits.choices) {
+                    problems.push(`${label}: the Juno takes at most ${deviceLimits.choices} choices.`);
+                }
+                waypoint.choices.forEach(choice => tooLong(problems, label, `choice "${choice}"`, choice, deviceLimits.choice));
             }
         });
         return problems;

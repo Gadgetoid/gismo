@@ -16,6 +16,10 @@ namespace gismo {
 
 namespace {
 
+constexpr int filter_wheel_height = 140;
+constexpr int camera_gap = 4;
+constexpr int camera_bottom_line_height = 22;
+
 constexpr int thumb_factor = 4;
 constexpr DWORD flash_ms = 180;
 constexpr int jpeg_capacity = 256 * 1024;
@@ -51,8 +55,40 @@ const wchar_t *filter_name_at(int index) {
     return wrapped >= 0 ? app.camera.filters[wrapped].name : L"No filter";
 }
 
+const char *camera_prompt() {
+    if (app.camera.camera_task >= 0 && app.mission.have_mission) {
+        return app.mission.quest.waypoints[app.camera.camera_task].prompt;
+    }
+    return "";
+}
+
+RECT camera_prompt_rect() {
+    RECT area = {8, 6, camera_width - 40, camera_height};
+    if (camera_prompt()[0] == 0) {
+        area.bottom = area.top;
+        return area;
+    }
+    RECT measured = measure_text_utf8(camera_prompt(), area, app.ui.small_font, DT_LEFT | DT_WORDBREAK);
+    area.bottom = area.top + (measured.bottom - measured.top);
+    RECT wheel = filter_wheel_rect();
+    if (area.bottom > wheel.top - camera_gap) {
+        area.bottom = wheel.top - camera_gap;
+    }
+    return area;
+}
+
 RECT filter_wheel_rect() {
-    return {0, camera_height / 2 - 70, 170, camera_height / 2 + 70};
+    int top = camera_height / 2 - filter_wheel_height / 2;
+    const char *prompt = camera_prompt();
+    if (prompt[0]) {
+        RECT area = {8, 6, camera_width - 40, camera_height};
+        RECT measured = measure_text_utf8(prompt, area, app.ui.small_font, DT_LEFT | DT_WORDBREAK);
+        int below_prompt = area.top + (measured.bottom - measured.top) + camera_gap;
+        top = below_prompt > top ? below_prompt : top;
+    }
+    int lowest = camera_height - camera_bottom_line_height - camera_gap - filter_wheel_height;
+    top = top > lowest ? lowest : top;
+    return {0, top, 170, top + filter_wheel_height};
 }
 
 void draw_filter_wheel() {
@@ -79,7 +115,7 @@ void draw_camera_screen() {
         RECT all = {0, 0, camera_width, camera_height};
         fill_canvas(all, RGB(20, 20, 30));
         RECT message = {20, camera_height / 2 - 20, camera_width - 80, camera_height / 2 + 20};
-        canvas_text(app.camera.device.running() ? L"Starting the camera\x2026" : L"The camera isn't working.\nIs another camera app open?", message, app.ui.medium_font, DT_CENTER | DT_WORDBREAK);
+        canvas_text(app.camera.start_failed ? L"The camera isn't working.\nIs another camera app open?" : L"Starting the camera\x2026", message, app.ui.medium_font, DT_CENTER | DT_WORDBREAK);
     }
     if (GetTickCount() - app.camera.flash_tick < flash_ms) {
         for (int y = 0; y < camera_height; y++) {
@@ -90,12 +126,13 @@ void draw_camera_screen() {
         }
     }
 
-    draw_filter_wheel();
-    if (app.camera.camera_task >= 0 && app.mission.have_mission) {
-        RECT prompt = {8, 6, camera_width - 40, 44};
+    if (have_frame) {
+        draw_filter_wheel();
+    }
+    if (camera_prompt()[0]) {
         wchar_t wide[160];
-        utf8_to_wide(app.mission.quest.waypoints[app.camera.camera_task].prompt, wide, 160);
-        canvas_text(wide, prompt, app.ui.small_font, DT_LEFT | DT_WORDBREAK);
+        utf8_to_wide(camera_prompt(), wide, 160);
+        canvas_text(wide, camera_prompt_rect(), app.ui.small_font, DT_LEFT | DT_WORDBREAK | DT_END_ELLIPSIS);
     }
     RECT close = canvas_close_rect();
     fill_canvas(close, RGB(160, 30, 30));
@@ -110,7 +147,7 @@ void draw_camera_screen() {
     } else {
         wsprintfW(bottom_line, L"Zoom %dx   %d photos", app.camera.device.zoom(), app.camera.photos_taken);
     }
-    RECT bottom = {8, camera_height - 22, camera_width - 8, camera_height - 2};
+    RECT bottom = {8, camera_height - camera_bottom_line_height, camera_width - 8, camera_height - 2};
     canvas_text(bottom_line, bottom, app.ui.small_font, DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS);
 
     rotate_canvas_to_screen();
@@ -198,10 +235,12 @@ void open_camera(int task) {
     start_session();
     app.camera.camera_task = task;
     app.camera.camera_note[0] = 0;
+    app.camera.start_failed = false;
     app.ui.current = screen::camera;
     redraw();
     UpdateWindow(app.ui.window);
     if (!app.camera.device.start(app.ui.window, camera_message)) {
+        app.camera.start_failed = true;
         log_line(L"camera didn't start");
     }
     redraw();

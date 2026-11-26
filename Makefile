@@ -43,6 +43,13 @@ site:
 screens:
 	$(MAKE) -C tests/screens
 
+DOC_SCREENS = clue map-route task-photo camera task-choice mission-list nearby-play found outing-so-far photos sky complete
+
+docs-screenshots: site screens
+	mkdir -p docs/screenshots
+	for name in $(DOC_SCREENS); do cp build/screens/*-$$name.png docs/screenshots/$$name.png; done
+	cd tests/planner && uv run --quiet page_screenshots.py ../../docs/screenshots
+
 browser-test: site
 	$(MAKE) -C tests/planner browser
 
@@ -53,4 +60,4 @@ test:
 clean:
 	rm -rf $(BUILD) build/card
 
-.PHONY: all maps example-maps card packages site screens browser-test test clean
+.PHONY: all maps example-maps card packages site screens docs-screenshots browser-test test clean
